@@ -1,140 +1,156 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Coins, Gift, Zap, Trophy, Info } from "lucide-react"
-import { useSeiWallet } from "@/lib/sei-wallet"
+import { Badge } from "@/components/ui/badge"
+import { useWallet } from "@/lib/sei-wallet"
+import { Trophy, Zap, Shield, Users, Star, Lock } from "lucide-react"
 
 export function PhanTokenInfo() {
-  const { assets } = useSeiWallet()
+  const { phantomBalance, spendPhanTokens } = useWallet()
 
-  const phanAsset = assets.find((asset) => asset.symbol === "PHAN")
-  const phanBalance = phanAsset ? Number.parseFloat(phanAsset.balance.replace(",", "")) : 0
+  const currentBalance = Number.parseFloat(phantomBalance)
+  const phantomPrice = 0.12
+  const usdValue = (currentBalance * phantomPrice).toFixed(2)
 
-  const rewards = [
-    { action: "Create Phantom Blockchain", reward: 100, icon: "🏗️" },
+  const earningMethods = [
+    { action: "Create Blockchain", reward: 100, icon: "🔗" },
     { action: "Deploy Blockchain", reward: 75, icon: "🚀" },
     { action: "Create Token", reward: 50, icon: "🪙" },
     { action: "Distribute Tokens", reward: 25, icon: "📤" },
-    { action: "Complete Stress Test", reward: 150, icon: "🛡️" },
+    { action: "Complete Stress Test", reward: 150, icon: "⚡" },
   ]
 
   const utilities = [
-    { feature: "Premium Analytics", cost: 500, icon: "📊" },
-    { feature: "Advanced Security Tests", cost: 300, icon: "🔒" },
-    { feature: "Custom Network Topologies", cost: 200, icon: "🌐" },
-    { feature: "Priority Support", cost: 1000, icon: "⭐" },
+    {
+      name: "Premium Analytics",
+      cost: 500,
+      icon: <Trophy className="h-4 w-4" />,
+      description: "Advanced charts and insights",
+    },
+    {
+      name: "Advanced Security Tests",
+      cost: 300,
+      icon: <Shield className="h-4 w-4" />,
+      description: "Comprehensive security audits",
+    },
+    {
+      name: "Custom Network Topologies",
+      cost: 200,
+      icon: <Zap className="h-4 w-4" />,
+      description: "Build custom network structures",
+    },
+    {
+      name: "Priority Support",
+      cost: 1000,
+      icon: <Star className="h-4 w-4" />,
+      description: "24/7 dedicated support channel",
+    },
   ]
 
+  const handleUnlock = (cost: number, name: string) => {
+    if (spendPhanTokens(cost)) {
+      alert(`${name} unlocked! You now have access to this premium feature.`)
+    } else {
+      alert(`Insufficient PHAN tokens. You need ${cost} PHAN but only have ${currentBalance}.`)
+    }
+  }
+
+  const getRank = () => {
+    if (currentBalance >= 1000) return { rank: "Phantom Master", color: "bg-purple-500", icon: "👑" }
+    if (currentBalance >= 500) return { rank: "Ghost Hunter", color: "bg-blue-500", icon: "🎯" }
+    if (currentBalance >= 200) return { rank: "Spirit Walker", color: "bg-green-500", icon: "🌟" }
+    if (currentBalance >= 50) return { rank: "Phantom Novice", color: "bg-yellow-500", icon: "⭐" }
+    return { rank: "New Ghost", color: "bg-gray-500", icon: "👻" }
+  }
+
+  const userRank = getRank()
+
   return (
-    <Card className="bg-black border-gray-800">
+    <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
       <CardHeader>
-        <CardTitle className="text-white flex items-center">
-          <Coins className="w-5 h-5 mr-2 text-purple-400" />
-          PHAN Token System
+        <CardTitle className="flex items-center space-x-2">
+          <span className="text-2xl">👻</span>
+          <span>PHAN Token Hub</span>
+          <Badge className={`${userRank.color} text-white ml-auto`}>
+            {userRank.icon} {userRank.rank}
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Current Balance */}
-        <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-700/50 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-300 text-sm">Your PHAN Balance</span>
-            <Badge variant="outline" className="text-purple-400 border-purple-400">
-              👻 PHAN
-            </Badge>
-          </div>
-          <div className="text-3xl font-bold text-white mb-1">{phanBalance.toLocaleString()} PHAN</div>
-          <div className="text-sm text-purple-300">≈ ${(phanBalance * 0.001).toFixed(2)} USD</div>
+        <div className="text-center p-4 bg-white/50 rounded-lg">
+          <p className="text-sm text-gray-600 mb-1">Your PHAN Balance</p>
+          <p className="text-3xl font-bold text-purple-600">{phantomBalance} PHAN</p>
+          <p className="text-sm text-gray-500">${usdValue} USD</p>
         </div>
 
-        {/* Earn Rewards */}
-        <div className="space-y-3">
-          <h4 className="text-white font-semibold flex items-center">
-            <Gift className="w-4 h-4 mr-2 text-green-400" />
+        {/* Earning Methods */}
+        <div>
+          <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+            <Zap className="h-4 w-4 mr-2 text-yellow-500" />
             Earn PHAN Tokens
           </h4>
           <div className="grid grid-cols-1 gap-2">
-            {rewards.map((reward, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-900 border border-gray-700 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">{reward.icon}</span>
-                  <span className="text-white text-sm">{reward.action}</span>
+            {earningMethods.map((method, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-white/30 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg">{method.icon}</span>
+                  <span className="text-sm font-medium">{method.action}</span>
                 </div>
-                <Badge variant="outline" className="text-green-400 border-green-400 text-xs">
-                  +{reward.reward} PHAN
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  +{method.reward} PHAN
                 </Badge>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Token Utilities */}
-        <div className="space-y-3">
-          <h4 className="text-white font-semibold flex items-center">
-            <Zap className="w-4 h-4 mr-2 text-blue-400" />
+        {/* Utilities */}
+        <div>
+          <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+            <Users className="h-4 w-4 mr-2 text-blue-500" />
             Spend PHAN Tokens
           </h4>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="space-y-3">
             {utilities.map((utility, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-900 border border-gray-700 rounded-lg"
-              >
+              <div key={index} className="flex items-center justify-between p-3 bg-white/30 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <span className="text-lg">{utility.icon}</span>
-                  <span className="text-white text-sm">{utility.feature}</span>
+                  {utility.icon}
+                  <div>
+                    <p className="text-sm font-medium">{utility.name}</p>
+                    <p className="text-xs text-gray-600">{utility.description}</p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="text-purple-400 border-purple-400 text-xs">
+                  <Badge variant="outline" className="text-purple-600 border-purple-300">
                     {utility.cost} PHAN
                   </Badge>
-                  <Button
-                    size="sm"
-                    disabled={phanBalance < utility.cost}
-                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1 h-auto"
-                  >
-                    {phanBalance >= utility.cost ? "Unlock" : "Need More"}
-                  </Button>
+                  {currentBalance >= utility.cost ? (
+                    <Button
+                      size="sm"
+                      onClick={() => handleUnlock(utility.cost, utility.name)}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      Unlock
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled className="text-gray-400 bg-transparent">
+                      <Lock className="h-3 w-3 mr-1" />
+                      Need More
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Token Info */}
-        <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <Info className="w-5 h-5 text-blue-400 mt-0.5" />
-            <div>
-              <h4 className="text-blue-300 font-medium mb-1">About PHAN Tokens</h4>
-              <p className="text-blue-200 text-sm">
-                PHAN tokens are earned by actively using the PhanAI platform. Use them to unlock premium features,
-                access advanced testing tools, and get priority support. The more you build and test, the more you earn!
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Leaderboard Teaser */}
-        <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-700/50 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              <div>
-                <h4 className="text-yellow-300 font-medium">Top Builder</h4>
-                <p className="text-yellow-200 text-sm">
-                  Rank #{Math.max(1, Math.floor(phanBalance / 100) + 1)} this month
-                </p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" className="border-yellow-700 text-yellow-400 bg-transparent">
-              View Leaderboard
-            </Button>
-          </div>
+        {/* Leaderboard Hint */}
+        <div className="text-center p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
+          <p className="text-xs text-gray-600">
+            🏆 Collect more PHAN tokens to climb the leaderboard and unlock exclusive features!
+          </p>
         </div>
       </CardContent>
     </Card>

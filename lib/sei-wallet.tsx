@@ -95,8 +95,8 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
       const balanceInSei = (Number.parseInt(seiBalance, 16) / Math.pow(10, 18)).toFixed(6)
       setBalance(balanceInSei)
 
-      // Mock additional assets for demonstration
-      const mockAssets: Asset[] = [
+      // Real assets based on actual wallet data
+      const realAssets: Asset[] = [
         {
           symbol: "SEI",
           name: "Sei Network",
@@ -104,29 +104,23 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
           decimals: 18,
           logo: "🔴",
         },
-        {
-          symbol: "USDC",
-          name: "USD Coin",
-          balance: "1,250.00",
-          decimals: 6,
-          contractAddress: "0x...",
-          logo: "💵",
-        },
-        {
-          symbol: "PHAN",
-          name: "PhanAI Token",
-          balance: "10,000.00",
-          decimals: 18,
-          contractAddress: "0x...",
-          logo: "👻",
-        },
       ]
 
-      setAssets(mockAssets)
+      // Only add other assets if they actually exist in the wallet
+      // For now, we'll keep it clean with just SEI
+      setAssets(realAssets)
     } catch (error) {
       console.error("Error fetching balance:", error)
       setBalance("0.000000")
-      setAssets([])
+      setAssets([
+        {
+          symbol: "SEI",
+          name: "Sei Network",
+          balance: "0.000000",
+          decimals: 18,
+          logo: "🔴",
+        },
+      ])
     } finally {
       setIsLoadingBalance(false)
     }

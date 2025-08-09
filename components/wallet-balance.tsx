@@ -43,13 +43,11 @@ export function WalletBalance() {
   const getTotalValue = () => {
     if (!showBalance) return "••••••"
 
-    // Mock USD values for demonstration
-    const seiPrice = 0.45 // Mock SEI price in USD
+    // Calculate real total based on actual balances
     const seiBalance = Number.parseFloat(balance || "0")
-    const usdcBalance = 1250.0
-    const phantomBalance = 10000 * 0.001 // Mock PHAN price
+    const seiPrice = 0.45 // Current SEI price (this could be fetched from an API)
 
-    const total = seiBalance * seiPrice + usdcBalance + phantomBalance
+    const total = seiBalance * seiPrice
     return `$${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
@@ -175,10 +173,6 @@ export function WalletBalance() {
                       {asset.symbol === "SEI" &&
                         showBalance &&
                         `≈ $${(Number.parseFloat(asset.balance) * 0.45).toFixed(2)}`}
-                      {asset.symbol === "USDC" && showBalance && `≈ $${asset.balance}`}
-                      {asset.symbol === "PHAN" &&
-                        showBalance &&
-                        `≈ $${(Number.parseFloat(asset.balance.replace(",", "")) * 0.001).toFixed(2)}`}
                     </div>
                   </div>
                 </div>

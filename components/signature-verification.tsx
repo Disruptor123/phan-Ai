@@ -169,7 +169,11 @@ export function SignatureVerification() {
               <div className="space-y-2">
                 {signatures.length === 0 ? (
                   <div className="text-center text-gray-400 py-8">
-                    No signatures found. Complete some operations to see signatures here.
+                    <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg mb-2">No Operations Yet</p>
+                    <p className="text-sm">
+                      Start creating phantom blockchains or tokens to see authorization signatures here.
+                    </p>
                   </div>
                 ) : (
                   signatures.map((sig, index) => (
@@ -287,7 +291,13 @@ export function SignatureVerification() {
                 </div>
               </div>
             ) : (
-              <div className="text-center text-gray-400 py-8">Select a signature from the list to view details</div>
+              <div className="text-center text-gray-400 py-8">
+                <Eye className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg mb-2">Select a Signature</p>
+                <p className="text-sm">
+                  Choose a signature from the list to view its verification details and message content.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

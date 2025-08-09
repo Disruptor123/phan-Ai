@@ -10,23 +10,10 @@ import { SendReceiveModal } from "@/components/send-receive-modal"
 import { TransactionSignatureModal } from "@/components/transaction-signature-modal"
 import { SignatureVerification } from "@/components/signature-verification"
 import { PhanTokenInfo } from "@/components/phan-token-info"
-import { useWallet } from "@/lib/sei-wallet"
-import {
-  Wallet,
-  Activity,
-  Zap,
-  Shield,
-  Network,
-  Send,
-  Download,
-  BarChart3,
-  Settings,
-  Bell,
-  Star,
-  Rocket,
-  Target,
-  Award,
-} from "lucide-react"
+import { WelcomeState } from "@/components/welcome-state"
+import { useSeiWallet } from "@/lib/sei-wallet"
+import { Wallet, Activity, Zap, Shield, BarChart3, Settings, Star, Target, LogOut, Copy, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface TestResult {
   id: string
@@ -47,19 +34,53 @@ interface Signature {
 }
 
 export default function Dashboard() {
-  const { isConnected, addPhanTokens } = useWallet()
+  const router = useRouter()
+  const { account, chainId, isConnected, disconnect, updatePhanBalance } = useSeiWallet()
   const [showSendReceive, setShowSendReceive] = useState(false)
   const [showSignature, setShowSignature] = useState(false)
   const [isFirstTime, setIsFirstTime] = useState(true)
   const [testResults, setTestResults] = useState<TestResult[]>([])
   const [signatures, setSignatures] = useState<Signature[]>([])
   const [isRunningTests, setIsRunningTests] = useState(false)
+  const [activeTab, setActiveTab] = useState("basic")
 
   // Check if user has performed any operations
   useEffect(() => {
-    const hasActivity = testResults.length > 0 || signatures.length > 0
+    const hasActivity = localStorage.getItem("phan_signatures") || localStorage.getItem("phan_user_activity")
     setIsFirstTime(!hasActivity && isConnected)
-  }, [testResults, signatures, isConnected])
+  }, [isConnected])
+
+  // Check wallet connection on mount
+  useEffect(() => {
+    if (!isConnected) {
+      router.push("/")
+    }
+  }, [isConnected, router])
+
+  // Handle getting started
+  const handleGetStarted = () => {
+    setIsFirstTime(false)
+    localStorage.setItem("phan_user_activity", "true")
+    setActiveTab("basic")
+  }
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      disconnect()
+      router.push("/")
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
+  }
+
+  // Copy wallet address
+  const copyAddress = () => {
+    if (account) {
+      navigator.clipboard.writeText(account)
+      alert("Address copied to clipboard!")
+    }
+  }
 
   const runComprehensiveTest = async () => {
     setIsRunningTests(true)
@@ -100,7 +121,7 @@ export default function Dashboard() {
 
       // Add PHAN tokens for successful operations
       if (completedTest.status === "success") {
-        addPhanTokens(op.reward)
+        updatePhanBalance((prev) => (Number.parseFloat(prev) + op.reward).toString())
       }
 
       // Add signature record
@@ -116,7 +137,7 @@ export default function Dashboard() {
     }
 
     // Bonus for completing full test suite
-    addPhanTokens(150)
+    updatePhanBalance((prev) => (Number.parseFloat(prev) + 150).toString())
     setIsRunningTests(false)
   }
 
@@ -159,348 +180,230 @@ export default function Dashboard() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center py-20">
-            <Wallet className="h-16 w-16 text-blue-500 mx-auto mb-6" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to PhanAI Dashboard</h1>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Connect your SEI wallet to access the full suite of blockchain development and testing tools.
-            </p>
-            <WalletBalance />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (isFirstTime) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Welcome Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <Rocket className="h-8 w-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-900">Welcome to PhanAI!</h1>
-            </div>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Your blockchain development and testing platform is ready. Start by running your first comprehensive test
-              suite to earn PHAN tokens and explore the platform.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            {/* Wallet Info */}
-            <div className="lg:col-span-1">
-              <WalletBalance />
-            </div>
-
-            {/* Quick Start Guide */}
-            <div className="lg:col-span-2">
-              <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Star className="h-5 w-5 text-yellow-500" />
-                    <span>Quick Start Guide</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                      <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        1
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Run Test Suite</h4>
-                        <p className="text-sm text-gray-600">Execute comprehensive blockchain tests</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                      <div className="flex-shrink-0 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        2
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Earn PHAN Tokens</h4>
-                        <p className="text-sm text-gray-600">Get rewarded for each successful operation</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                      <div className="flex-shrink-0 w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        3
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Unlock Features</h4>
-                        <p className="text-sm text-gray-600">Use tokens to access premium tools</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                      <div className="flex-shrink-0 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        4
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Build & Deploy</h4>
-                        <p className="text-sm text-gray-600">Create your own blockchain solutions</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-center pt-4">
-                    <Button
-                      onClick={runComprehensiveTest}
-                      disabled={isRunningTests}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3"
-                    >
-                      {isRunningTests ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Running Tests...
-                        </>
-                      ) : (
-                        <>
-                          <Rocket className="h-4 w-4 mr-2" />
-                          Start Your Journey
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Features Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-              <Network className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="font-semibold text-gray-900 mb-2">Blockchain Testing</h3>
-              <p className="text-sm text-gray-600">
-                Comprehensive testing suite for blockchain operations and smart contracts
-              </p>
-            </Card>
-
-            <Card className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-              <Award className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-              <h3 className="font-semibold text-gray-900 mb-2">Token Rewards</h3>
-              <p className="text-sm text-gray-600">
-                Earn PHAN tokens for every successful operation and unlock premium features
-              </p>
-            </Card>
-
-            <Card className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-              <Shield className="h-12 w-12 text-green-600 mx-auto mb-4" />
-              <h3 className="font-semibold text-gray-900 mb-2">Security Audits</h3>
-              <p className="text-sm text-gray-600">
-                Advanced security testing and signature verification for your blockchain projects
-              </p>
-            </Card>
-          </div>
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Wallet Not Connected</h2>
+          <p className="text-gray-400 mb-6">Please connect your Sei wallet to access the dashboard</p>
+          <Button onClick={() => router.push("/")} className="bg-white text-black hover:bg-gray-100">
+            Go Back to Landing Page
+          </Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="border-b border-gray-800 p-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Monitor your blockchain operations and manage your assets</p>
+            <h1 className="text-2xl font-bold text-white">PHAN AI Dashboard</h1>
+            <p className="text-white">Phantom Blockchain Development Environment</p>
           </div>
-          <div className="flex items-center space-x-3">
-            <Button variant="outline" size="sm">
-              <Bell className="h-4 w-4 mr-2" />
-              Notifications
-            </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
+          <div className="flex items-center gap-6">
+            {/* Compact Wallet Info */}
+            <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2">
+              <Wallet className="w-4 h-4 text-red-400" />
+              <div className="text-sm">
+                <p className="text-white font-mono">
+                  {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "Not Connected"}
+                </p>
+                <p className="text-gray-400 text-xs">Chain ID: {chainId}</p>
+              </div>
+              <Button
+                onClick={copyAddress}
+                size="sm"
+                variant="ghost"
+                className="p-1 h-auto text-gray-400 hover:text-white"
+              >
+                <Copy className="w-3 h-3" />
+              </Button>
+            </div>
+
+            <Badge variant="outline" className="text-green-400 border-green-400">
+              <Activity className="w-4 h-4 mr-2" />
+              System Online
+            </Badge>
+
+            {/* Logout Button */}
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white bg-transparent"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
             </Button>
           </div>
         </div>
+      </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p
-                      className={`text-sm ${stat.change.startsWith("+") ? "text-green-600" : stat.change.startsWith("-") ? "text-red-600" : "text-gray-500"}`}
-                    >
-                      {stat.change}
-                    </p>
-                  </div>
-                  <stat.icon className={`h-8 w-8 ${stat.color}`} />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="grid grid-cols-4 gap-6 mb-6">
+          {/* Wallet Balance - Takes up 1 column */}
+          <div className="col-span-1">
+            <WalletBalance />
+          </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-6">
-            <Tabs defaultValue="operations" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="operations">Operations</TabsTrigger>
-                <TabsTrigger value="signatures">Signatures</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              </TabsList>
+          {/* Main Content Area - Takes up 3 columns */}
+          <div className="col-span-3">
+            {isFirstTime ? (
+              <WelcomeState onGetStarted={handleGetStarted} />
+            ) : (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-4 bg-black border border-gray-800">
+                  <TabsTrigger
+                    value="basic"
+                    className="data-[state=active]:bg-white data-[state=active]:text-black text-white"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Operations
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="signatures"
+                    className="data-[state=active]:bg-white data-[state=active]:text-black text-white"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Signatures
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="analytics"
+                    className="data-[state=active]:bg-white data-[state=active]:text-black text-white"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analytics
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="tokens"
+                    className="data-[state=active]:bg-white data-[state=active]:text-black text-white"
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    PHAN Tokens
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="operations" className="space-y-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Test Operations</CardTitle>
-                    <Button onClick={runComprehensiveTest} disabled={isRunningTests} size="sm">
-                      {isRunningTests ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Running...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="h-4 w-4 mr-2" />
-                          Run Tests
-                        </>
-                      )}
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {testResults.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                          <p>No operations yet. Run your first test to get started!</p>
-                        </div>
-                      ) : (
-                        testResults
-                          .slice(-5)
-                          .reverse()
-                          .map((result) => (
-                            <div
-                              key={result.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${
-                                    result.status === "success"
-                                      ? "bg-green-500"
-                                      : result.status === "failed"
-                                        ? "bg-red-500"
-                                        : "bg-yellow-500 animate-pulse"
-                                  }`}
-                                ></div>
-                                <div>
-                                  <p className="font-medium text-gray-900">{result.type}</p>
-                                  <p className="text-sm text-gray-600">{result.details}</p>
+                {/* Operations Tab */}
+                <TabsContent value="basic" className="space-y-6">
+                  <Card className="bg-black border-gray-800">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="text-white">Test Operations</CardTitle>
+                      <Button
+                        onClick={runComprehensiveTest}
+                        disabled={isRunningTests}
+                        className="bg-white text-black hover:bg-gray-100"
+                      >
+                        {isRunningTests ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Running Tests...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 mr-2" />
+                            Run Comprehensive Test
+                          </>
+                        )}
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {testResults.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <Activity className="h-12 w-12 mx-auto mb-4 text-gray-600" />
+                            <p>No operations yet. Run your first test to get started!</p>
+                          </div>
+                        ) : (
+                          testResults
+                            .slice(-5)
+                            .reverse()
+                            .map((result) => (
+                              <div
+                                key={result.id}
+                                className="flex items-center justify-between p-3 bg-gray-900 border border-gray-700 rounded-lg"
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div
+                                    className={`w-2 h-2 rounded-full ${
+                                      result.status === "success"
+                                        ? "bg-green-500"
+                                        : result.status === "failed"
+                                          ? "bg-red-500"
+                                          : "bg-yellow-500 animate-pulse"
+                                    }`}
+                                  ></div>
+                                  <div>
+                                    <p className="font-medium text-white">{result.type}</p>
+                                    <p className="text-sm text-gray-400">{result.details}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <Badge
+                                    variant={
+                                      result.status === "success"
+                                        ? "default"
+                                        : result.status === "failed"
+                                          ? "destructive"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {result.status}
+                                  </Badge>
+                                  {result.duration > 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">{result.duration}ms</p>
+                                  )}
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <Badge
-                                  variant={
-                                    result.status === "success"
-                                      ? "default"
-                                      : result.status === "failed"
-                                        ? "destructive"
-                                        : "secondary"
-                                  }
-                                >
-                                  {result.status}
-                                </Badge>
-                                {result.duration > 0 && (
-                                  <p className="text-xs text-gray-500 mt-1">{result.duration}ms</p>
-                                )}
-                              </div>
+                            ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Signatures Tab */}
+                <TabsContent value="signatures">
+                  <SignatureVerification signatures={signatures} />
+                </TabsContent>
+
+                {/* Analytics Tab */}
+                <TabsContent value="analytics" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {stats.map((stat, index) => (
+                      <Card key={index} className="bg-black border-gray-800">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-400">{stat.title}</p>
+                              <p className="text-2xl font-bold text-white">{stat.value}</p>
+                              <p
+                                className={`text-sm ${
+                                  stat.change.startsWith("+")
+                                    ? "text-green-400"
+                                    : stat.change.startsWith("-")
+                                      ? "text-red-400"
+                                      : "text-gray-500"
+                                }`}
+                              >
+                                {stat.change}
+                              </p>
                             </div>
-                          ))
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                            <stat.icon className={`h-8 w-8 ${stat.color}`} />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
 
-              <TabsContent value="signatures">
-                <SignatureVerification signatures={signatures} />
-              </TabsContent>
-
-              <TabsContent value="analytics">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <BarChart3 className="h-5 w-5 mr-2" />
-                      Performance Analytics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <p className="text-2xl font-bold text-blue-600">
-                            {testResults.filter((t) => t.status === "success").length}
-                          </p>
-                          <p className="text-sm text-gray-600">Successful Operations</p>
-                        </div>
-                        <div className="text-center p-4 bg-red-50 rounded-lg">
-                          <p className="text-2xl font-bold text-red-600">
-                            {testResults.filter((t) => t.status === "failed").length}
-                          </p>
-                          <p className="text-sm text-gray-600">Failed Operations</p>
-                        </div>
-                      </div>
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <p className="text-2xl font-bold text-green-600">
-                          {signatures.filter((s) => s.status === "verified").length}
-                        </p>
-                        <p className="text-sm text-gray-600">Verified Signatures</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            <WalletBalance />
-            <PhanTokenInfo />
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline"
-                  onClick={() => setShowSendReceive(true)}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Send / Receive
-                </Button>
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline"
-                  onClick={() => setShowSignature(true)}
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Sign Transaction
-                </Button>
-                <Button className="w-full justify-start bg-transparent" variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Data
-                </Button>
-              </CardContent>
-            </Card>
+                {/* PHAN Tokens Tab */}
+                <TabsContent value="tokens">
+                  <PhanTokenInfo />
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </div>
       </div>

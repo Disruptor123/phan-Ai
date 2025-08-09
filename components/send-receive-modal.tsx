@@ -5,133 +5,89 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Send, ArrowDownToLine, Copy, ExternalLink, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 import { useSeiWallet } from "@/lib/sei-wallet"
+import { Send, Download, Copy, QrCode, AlertCircle } from "lucide-react"
 
 interface SendReceiveModalProps {
   isOpen: boolean
   onClose: () => void
-  mode: "send" | "receive"
 }
 
-export function SendReceiveModal({ isOpen, onClose, mode }: SendReceiveModalProps) {
-  const { account, sendTransaction, assets } = useSeiWallet()
+export function SendReceiveModal({ isOpen, onClose }: SendReceiveModalProps) {
+  const { account, assets, sendTransaction } = useSeiWallet()
+  const [activeTab, setActiveTab] = useState("send")
 
   // Send form state
-  const [recipientAddress, setRecipientAddress] = useState("")
+  const [recipient, setRecipient] = useState("")
   const [amount, setAmount] = useState("")
   const [selectedAsset, setSelectedAsset] = useState("SEI")
   const [memo, setMemo] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [transactionHash, setTransactionHash] = useState("")
-  const [error, setError] = useState("")
-
-  // Receive state
-  const [generatedAddress] = useState(account || "")
+  const [isSending, setIsSending] = useState(false)
 
   const handleSend = async () => {
-    if (!recipientAddress || !amount) {
-      setError("Please fill in all required fields")
+    if (!recipient || !amount) {
+      alert("Please fill in all required fields")
       return
     }
-
-    if (!recipientAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-      setError("Invalid recipient address format")
-      return
-    }
-
-    if (Number.parseFloat(amount) <= 0) {
-      setError("Amount must be greater than 0")
-      return
-    }
-
-    setIsLoading(true)
-    setError("")
 
     try {
-      const txHash = await sendTransaction(recipientAddress, amount, memo)
-      setTransactionHash(txHash)
-
-      // Reset form
-      setRecipientAddress("")
-      setAmount("")
-      setMemo("")
-
-      alert(`Transaction sent successfully! Hash: ${txHash}`)
-    } catch (error: any) {
-      setError(error.message || "Transaction failed")
+      setIsSending(true)
+      const txHash = await sendTransaction(recipient, amount, memo)
+      alert(`Transaction sent successfully!\nTx Hash: ${txHash}`)
+      onClose()
+    } catch (error) {
+      console.error("Send failed:", error)
+      alert("Transaction failed. Please try again.")
     } finally {
-      setIsLoading(false)
+      setIsSending(false)
     }
   }
 
   const copyAddress = () => {
-    if (generatedAddress) {
-      navigator.clipboard.writeText(generatedAddress)
+    if (account) {
+      navigator.clipboard.writeText(account)
       alert("Address copied to clipboard!")
     }
   }
 
-  const copyTransactionHash = () => {
-    if (transactionHash) {
-      navigator.clipboard.writeText(transactionHash)
-      alert("Transaction hash copied to clipboard!")
-    }
-  }
-
-  const resetForm = () => {
-    setRecipientAddress("")
-    setAmount("")
-    setMemo("")
-    setError("")
-    setTransactionHash("")
-  }
-
-  const handleClose = () => {
-    resetForm()
-    onClose()
-  }
+  const selectedAssetData = assets.find((asset) => asset.symbol === selectedAsset)
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-black border-gray-800 text-white max-w-md">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center text-white">
-            {mode === "send" ? (
-              <>
-                <Send className="w-5 h-5 mr-2 text-red-400" />
-                Send Tokens
-              </>
-            ) : (
-              <>
-                <ArrowDownToLine className="w-5 h-5 mr-2 text-green-400" />
-                Receive Tokens
-              </>
-            )}
-          </DialogTitle>
+          <DialogTitle>Send & Receive</DialogTitle>
         </DialogHeader>
 
-        {mode === "send" ? (
-          <div className="space-y-4">
-            {/* Asset Selection */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="send" className="flex items-center">
+              <Send className="h-4 w-4 mr-2" />
+              Send
+            </TabsTrigger>
+            <TabsTrigger value="receive" className="flex items-center">
+              <Download className="h-4 w-4 mr-2" />
+              Receive
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="send" className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-white">Asset</Label>
+              <Label htmlFor="asset">Asset</Label>
               <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-                <SelectTrigger className="bg-black border-gray-700 text-white">
-                  <SelectValue />
+                <SelectTrigger>
+                  <SelectValue placeholder="Select asset" />
                 </SelectTrigger>
-                <SelectContent className="bg-black border-gray-700">
+                <SelectContent>
                   {assets.map((asset) => (
-                    <SelectItem key={asset.symbol} value={asset.symbol} className="text-white">
+                    <SelectItem key={asset.symbol} value={asset.symbol}>
                       <div className="flex items-center space-x-2">
                         <span>{asset.logo}</span>
                         <span>{asset.symbol}</span>
-                        <span className="text-gray-400">({asset.balance})</span>
+                        <span className="text-gray-500">({asset.balance})</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -139,179 +95,115 @@ export function SendReceiveModal({ isOpen, onClose, mode }: SendReceiveModalProp
               </Select>
             </div>
 
-            {/* Recipient Address */}
             <div className="space-y-2">
-              <Label className="text-white">Recipient Address</Label>
+              <Label htmlFor="recipient">Recipient Address</Label>
               <Input
-                placeholder="0x..."
-                value={recipientAddress}
-                onChange={(e) => setRecipientAddress(e.target.value)}
-                className="bg-black border-gray-700 text-white placeholder:text-gray-400 font-mono text-sm"
+                id="recipient"
+                placeholder="sei1..."
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="font-mono text-sm"
               />
             </div>
 
-            {/* Amount */}
             <div className="space-y-2">
-              <Label className="text-white">Amount</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="amount">Amount</Label>
+                {selectedAssetData && (
+                  <span className="text-sm text-gray-500">
+                    Balance: {selectedAssetData.balance} {selectedAsset}
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <Input
+                  id="amount"
                   type="number"
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="bg-black border-gray-700 text-white placeholder:text-gray-400 pr-16"
+                  className="pr-16"
                 />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
-                  {selectedAsset}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-sm text-gray-500">{selectedAsset}</span>
                 </div>
               </div>
+              {selectedAssetData && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAmount(selectedAssetData.balance)}
+                  className="text-xs text-blue-600 hover:text-blue-700 p-0 h-auto"
+                >
+                  Use Max
+                </Button>
+              )}
             </div>
 
-            {/* Memo (Optional) */}
             <div className="space-y-2">
-              <Label className="text-white">Memo (Optional)</Label>
+              <Label htmlFor="memo">Memo (Optional)</Label>
               <Textarea
-                placeholder="Transaction note..."
+                id="memo"
+                placeholder="Add a note..."
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
-                className="bg-black border-gray-700 text-white placeholder:text-gray-400 resize-none"
                 rows={2}
               />
             </div>
 
-            {/* Transaction Summary */}
-            <Card className="bg-gray-900 border-gray-700">
-              <CardContent className="p-3 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Network Fee</span>
-                  <span className="text-white">~0.001 SEI</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Total</span>
-                  <span className="text-white">{amount ? `${amount} ${selectedAsset} + fee` : "0.00"}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Error Display */}
-            {error && (
-              <div className="bg-red-900/20 border border-red-700 rounded-lg p-3 flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 text-red-400" />
-                <span className="text-red-300 text-sm">{error}</span>
+            <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+              <div className="text-sm text-yellow-800">
+                <p className="font-medium">Transaction Fee</p>
+                <p>Network fee: ~0.001 SEI</p>
               </div>
-            )}
+            </div>
 
-            {/* Transaction Success */}
-            {transactionHash && (
-              <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-green-300 text-sm font-medium">Transaction Sent</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-green-300 text-xs font-mono">
-                    {transactionHash.slice(0, 10)}...{transactionHash.slice(-8)}
-                  </span>
-                  <div className="flex space-x-1">
-                    <Button
-                      onClick={copyTransactionHash}
-                      size="sm"
-                      variant="ghost"
-                      className="p-1 h-auto text-green-400 hover:text-green-300"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="p-1 h-auto text-green-400 hover:text-green-300">
-                      <ExternalLink className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Send Button */}
-            <Button
-              onClick={handleSend}
-              disabled={isLoading || !recipientAddress || !amount}
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
-            >
-              {isLoading ? (
+            <Button onClick={handleSend} disabled={isSending || !recipient || !amount} className="w-full">
+              {isSending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="h-4 w-4 mr-2" />
                   Send {selectedAsset}
                 </>
               )}
             </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Receive Address */}
-            <div className="space-y-2">
-              <Label className="text-white">Your Wallet Address</Label>
-              <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
-                <div className="text-center space-y-3">
-                  {/* QR Code Placeholder */}
-                  <div className="w-32 h-32 mx-auto bg-white rounded-lg flex items-center justify-center">
-                    <div className="text-black text-xs font-mono break-all p-2">{generatedAddress.slice(0, 20)}...</div>
-                  </div>
+          </TabsContent>
 
-                  {/* Address */}
-                  <div className="space-y-2">
-                    <div className="text-white font-mono text-sm break-all bg-black border border-gray-600 rounded p-2">
-                      {generatedAddress}
-                    </div>
-                    <Button onClick={copyAddress} size="sm" className="w-full bg-gray-700 hover:bg-gray-600 text-white">
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Address
-                    </Button>
+          <TabsContent value="receive" className="space-y-4">
+            <div className="text-center space-y-4">
+              <div className="p-6 bg-gray-50 rounded-lg">
+                <QrCode className="h-24 w-24 text-gray-400 mx-auto mb-4" />
+                <p className="text-sm text-gray-600 mb-2">Your SEI Address</p>
+                <div className="p-3 bg-white border rounded-lg">
+                  <p className="font-mono text-sm break-all text-gray-900">{account || "Not connected"}</p>
+                </div>
+              </div>
+
+              <Button onClick={copyAddress} variant="outline" className="w-full bg-transparent">
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Address
+              </Button>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium">Important</p>
+                    <p>
+                      Only send SEI and compatible tokens to this address. Sending other assets may result in permanent
+                      loss.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Instructions */}
-            <Card className="bg-gray-900 border-gray-700">
-              <CardContent className="p-4">
-                <h4 className="text-white font-medium mb-2">How to receive tokens:</h4>
-                <ul className="text-gray-300 text-sm space-y-1">
-                  <li>• Share this address with the sender</li>
-                  <li>• Only send SEI network compatible tokens</li>
-                  <li>• Double-check the address before sharing</li>
-                  <li>• Transactions are irreversible</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Supported Assets */}
-            <div className="space-y-2">
-              <Label className="text-white">Supported Assets</Label>
-              <div className="flex flex-wrap gap-2">
-                {assets.map((asset) => (
-                  <Badge key={asset.symbol} variant="outline" className="text-white border-gray-600">
-                    {asset.logo} {asset.symbol}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Separator className="bg-gray-700" />
-
-        <div className="flex justify-end space-x-2">
-          <Button
-            onClick={handleClose}
-            variant="outline"
-            className="border-gray-700 text-white hover:bg-gray-800 bg-transparent"
-          >
-            Close
-          </Button>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

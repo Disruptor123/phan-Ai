@@ -21,9 +21,22 @@ interface SeiWalletContextType {
   chainId: string | null
   isConnected: boolean
   isConnecting: boolean
+  balance: string | null
+  isLoadingBalance: boolean
+  assets: Asset[]
   connect: () => Promise<void>
   disconnect: () => void
+  refreshBalance: () => Promise<void>
   provider: any
+}
+
+interface Asset {
+  symbol: string
+  name: string
+  balance: string
+  decimals: number
+  contractAddress?: string
+  logo?: string
 }
 
 const SeiWalletContext = createContext<SeiWalletContextType | null>(null)
@@ -61,32 +74,116 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
   const [chainId, setChainId] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [balance, setBalance] = useState<string | null>(null)
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false)
+  const [assets, setAssets] = useState<Asset[]>([])
   const [provider, setProvider] = useState<any>(null)
 
-  const updateAccountInfo = useCallback(async (walletProvider: any) => {
+  const fetchBalance = useCallback(async (walletProvider: any, walletAccount: string) => {
     try {
-      const accounts = await walletProvider.request({ method: "eth_accounts" })
-      const currentChainId = await walletProvider.request({ method: "eth_chainId" })
+      setIsLoadingBalance(true)
 
-      if (accounts.length > 0) {
-        setAccount(accounts[0])
-        setChainId(currentChainId)
-        setIsConnected(true)
+      // Fetch SEI balance
+      const seiBalance = await walletProvider.request({
+        method: "eth_getBalance",
+        params: [walletAccount, "latest"],
+      })
 
-        // Store in localStorage
-        localStorage.setItem("sei_wallet_connected", "true")
-        localStorage.setItem("sei_wallet_address", accounts[0])
-      } else {
+      // Convert from wei to SEI (18 decimals)
+      const balanceInSei = (Number.parseInt(seiBalance, 16) / Math.pow(10, 18)).toFixed(6)
+      setBalance(balanceInSei)
+
+      // Mock additional assets for demonstration
+      const mockAssets: Asset[] = [
+        {
+          symbol: "SEI",
+          name: "Sei Network",
+          balance: balanceInSei,
+          decimals: 18,
+          logo: "🔴",
+        },
+        {
+          symbol: "USDC",
+          name: "USD Coin",
+          balance: "1,250.00",
+          decimals: 6,
+          contractAddress: "0x...",
+          logo: "💵",
+        },
+        {
+          symbol: "PHAN",
+          name: "PhanAI Token",
+          balance: "10,000.00",
+          decimals: 18,
+          contractAddress: "0x...",
+          logo: "👻",
+        },
+      ]
+
+      setAssets(mockAssets)
+    } catch (error) {
+      console.error("Error fetching balance:", error)
+      setBalance("0.000000")
+      setAssets([])
+    } finally {
+      setIsLoadingBalance(false)
+    }
+  }, [])
+
+  const refreshBalance = useCallback(async () => {
+    if (provider && account) {
+      await fetchBalance(provider, account)
+    }
+  }, [provider, account, fetchBalance])
+
+  // Update the updateAccountInfo function to include balance fetching
+  const updateAccountInfo = useCallback(
+    async (walletProvider: any) => {
+      try {
+        const accounts = await walletProvider.request({ method: "eth_accounts" })
+        const currentChainId = await walletProvider.request({ method: "eth_chainId" })
+
+        if (accounts.length > 0) {
+          setAccount(accounts[0])
+          setChainId(currentChainId)
+          setIsConnected(true)
+
+          // Fetch balance
+          await fetchBalance(walletProvider, accounts[0])
+
+          // Store in localStorage
+          localStorage.setItem("sei_wallet_connected", "true")
+          localStorage.setItem("sei_wallet_address", accounts[0])
+        } else {
+          setAccount(null)
+          setChainId(null)
+          setIsConnected(false)
+          setBalance(null)
+          setAssets([])
+        }
+      } catch (error) {
+        console.error("Error updating account info:", error)
         setAccount(null)
         setChainId(null)
         setIsConnected(false)
+        setBalance(null)
+        setAssets([])
       }
-    } catch (error) {
-      console.error("Error updating account info:", error)
-      setAccount(null)
-      setChainId(null)
-      setIsConnected(false)
-    }
+    },
+    [fetchBalance],
+  )
+
+  const disconnect = useCallback(() => {
+    setAccount(null)
+    setChainId(null)
+    setIsConnected(false)
+    setProvider(null)
+    setBalance(null)
+    setAssets([])
+
+    // Clear localStorage
+    localStorage.removeItem("sei_wallet_connected")
+    localStorage.removeItem("sei_wallet_address")
   }, [])
 
   const connect = useCallback(async () => {
@@ -123,18 +220,7 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsConnecting(false)
     }
-  }, [updateAccountInfo])
-
-  const disconnect = useCallback(() => {
-    setAccount(null)
-    setChainId(null)
-    setIsConnected(false)
-    setProvider(null)
-
-    // Clear localStorage
-    localStorage.removeItem("sei_wallet_connected")
-    localStorage.removeItem("sei_wallet_address")
-  }, [])
+  }, [updateAccountInfo, disconnect])
 
   // Auto-connect on mount if previously connected
   useEffect(() => {
@@ -157,13 +243,18 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     autoConnect()
   }, [updateAccountInfo, disconnect])
 
+  // Update the value object to include new properties
   const value: SeiWalletContextType = {
     account,
     chainId,
     isConnected,
     isConnecting,
+    balance,
+    isLoadingBalance,
+    assets,
     connect,
     disconnect,
+    refreshBalance,
     provider,
   }
 

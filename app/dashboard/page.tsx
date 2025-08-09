@@ -34,13 +34,14 @@ import { WalletBalance } from "@/components/wallet-balance"
 import { TransactionSignatureModal } from "@/components/transaction-signature-modal"
 import { SignatureVerification } from "@/components/signature-verification"
 import { WelcomeState } from "@/components/welcome-state"
+import { PhanTokenInfo } from "@/components/phan-token-info"
 
 export default function Dashboard() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("basic")
 
   // Sei wallet hooks
-  const { account, chainId, isConnected, disconnect } = useSeiWallet()
+  const { account, chainId, isConnected, disconnect, updatePhanBalance } = useSeiWallet()
 
   // Basic Setup State
   const [blockchainName, setBlockchainName] = useState("")
@@ -74,7 +75,7 @@ export default function Dashboard() {
   const [amountPerAddress, setAmountPerAddress] = useState("")
   const [tokensDistributed, setTokensDistributed] = useState(false)
   const [txFeesEnabled, setTxFeesEnabled] = useState(false)
-  const [stakingEnabled, setStakingEnabled] = useState(false)
+  const [stakingEnabled, setStakingEnabled] = useState("")
   const [votingEnabled, setVotingEnabled] = useState("")
   const [feeRate, setFeeRate] = useState("")
   const [apyRate, setApyRate] = useState("")
@@ -457,14 +458,28 @@ export default function Dashboard() {
     }
 
     setBlockchainCreated(true)
-    alert(`Phantom blockchain "${blockchainName}" created successfully!\nSignature: ${signature.slice(0, 20)}...`)
+
+    // Reward user with PHAN tokens for creating blockchain
+    const currentPhanBalance = localStorage.getItem(`phan_balance_${account}`) || "0.000000"
+    const newBalance = (Number.parseFloat(currentPhanBalance) + 100).toFixed(6)
+    updatePhanBalance(newBalance)
+
+    alert(`Phantom blockchain "${blockchainName}" created successfully!\nSignature: ${signature.slice(0, 20)}...
+Reward: +100 PHAN tokens earned!`)
   }
 
   const executeTokenCreation = async (signature: string) => {
     // Simulate token creation with signature verification
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setTokenCreated(true)
-    alert(`Token "${tokenName}" (${tokenSymbol}) created successfully!\nSignature: ${signature.slice(0, 20)}...`)
+
+    // Reward user with PHAN tokens for creating token
+    const currentPhanBalance = localStorage.getItem(`phan_balance_${account}`) || "0.000000"
+    const newBalance = (Number.parseFloat(currentPhanBalance) + 50).toFixed(6)
+    updatePhanBalance(newBalance)
+
+    alert(`Token "${tokenName}" (${tokenSymbol}) created successfully!\nSignature: ${signature.slice(0, 20)}...
+Reward: +50 PHAN tokens earned!`)
   }
 
   const executeBlockchainDeployment = async (signature: string) => {
@@ -477,7 +492,14 @@ export default function Dashboard() {
         if (prev >= 100) {
           clearInterval(progressInterval)
           setDeploymentStatus("deployed")
-          alert(`Blockchain deployed successfully!\nSignature: ${signature.slice(0, 20)}...`)
+
+          // Reward user with PHAN tokens for deployment
+          const currentPhanBalance = localStorage.getItem(`phan_balance_${account}`) || "0.000000"
+          const newBalance = (Number.parseFloat(currentPhanBalance) + 75).toFixed(6)
+          updatePhanBalance(newBalance)
+
+          alert(`Blockchain deployed successfully!\nSignature: ${signature.slice(0, 20)}...
+Reward: +75 PHAN tokens earned!`)
           return 100
         }
         return prev + 10
@@ -489,7 +511,14 @@ export default function Dashboard() {
     // Simulate token distribution with signature verification
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setTokensDistributed(true)
-    alert(`Tokens distributed successfully!\nSignature: ${signature.slice(0, 20)}...`)
+
+    // Reward user with PHAN tokens for distribution
+    const currentPhanBalance = localStorage.getItem(`phan_balance_${account}`) || "0.000000"
+    const newBalance = (Number.parseFloat(currentPhanBalance) + 25).toFixed(6)
+    updatePhanBalance(newBalance)
+
+    alert(`Tokens distributed successfully!\nSignature: ${signature.slice(0, 20)}...
+Reward: +25 PHAN tokens earned!`)
   }
 
   if (!isConnected) {
@@ -1269,6 +1298,13 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* Add PHAN Token Info Card */}
+        {!isFirstTime && (
+          <div className="mb-6">
+            <PhanTokenInfo />
+          </div>
+        )}
 
         {/* Test Results Panel */}
         {testMode && testResults.length > 0 && (

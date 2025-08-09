@@ -47,7 +47,12 @@ export function WalletBalance() {
     const seiBalance = Number.parseFloat(balance || "0")
     const seiPrice = 0.45 // Current SEI price (this could be fetched from an API)
 
-    const total = seiBalance * seiPrice
+    // Get PHAN balance from assets
+    const phanAsset = assets.find((asset) => asset.symbol === "PHAN")
+    const phanBalance = phanAsset ? Number.parseFloat(phanAsset.balance.replace(",", "")) : 0
+    const phanPrice = 0.001 // Mock PHAN price
+
+    const total = seiBalance * seiPrice + phanBalance * phanPrice
     return `$${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
@@ -173,6 +178,9 @@ export function WalletBalance() {
                       {asset.symbol === "SEI" &&
                         showBalance &&
                         `≈ $${(Number.parseFloat(asset.balance) * 0.45).toFixed(2)}`}
+                      {asset.symbol === "PHAN" &&
+                        showBalance &&
+                        `≈ $${(Number.parseFloat(asset.balance.replace(",", "")) * 0.001).toFixed(2)}`}
                     </div>
                   </div>
                 </div>

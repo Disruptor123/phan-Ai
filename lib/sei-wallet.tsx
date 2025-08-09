@@ -30,6 +30,7 @@ interface SeiWalletContextType {
   provider: any
   signMessage: (message: string) => Promise<string>
   sendTransaction: (to: string, amount: string, memo?: string) => Promise<string>
+  updatePhanBalance: (newBalance: string) => void
 }
 
 interface Asset {
@@ -104,10 +105,25 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
           decimals: 18,
           logo: "🔴",
         },
+        {
+          symbol: "PHAN",
+          name: "PhanAI Token",
+          balance: "0.000000", // Will be updated when user creates/receives PHAN tokens
+          decimals: 18,
+          contractAddress: "0x...", // Placeholder contract address
+          logo: "👻",
+        },
       ]
 
-      // Only add other assets if they actually exist in the wallet
-      // For now, we'll keep it clean with just SEI
+      // Check if user has any PHAN tokens from previous operations
+      const storedPhanBalance = localStorage.getItem(`phan_balance_${walletAccount}`)
+      if (storedPhanBalance) {
+        const phanAsset = realAssets.find((asset) => asset.symbol === "PHAN")
+        if (phanAsset) {
+          phanAsset.balance = storedPhanBalance
+        }
+      }
+
       setAssets(realAssets)
     } catch (error) {
       console.error("Error fetching balance:", error)
@@ -326,6 +342,18 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     [provider, account],
   )
 
+  const updatePhanBalance = useCallback(
+    (newBalance: string) => {
+      if (account) {
+        localStorage.setItem(`phan_balance_${account}`, newBalance)
+        setAssets((prevAssets) =>
+          prevAssets.map((asset) => (asset.symbol === "PHAN" ? { ...asset, balance: newBalance } : asset)),
+        )
+      }
+    },
+    [account],
+  )
+
   // Update the value object to include new properties
   const value: SeiWalletContextType = {
     account,
@@ -341,6 +369,7 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     provider,
     signMessage,
     sendTransaction,
+    updatePhanBalance,
   }
 
   return <SeiWalletContext.Provider value={value}>{children}</SeiWalletContext.Provider>

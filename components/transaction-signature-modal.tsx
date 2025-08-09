@@ -23,7 +23,7 @@ interface TransactionSignatureModalProps {
 }
 
 export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operation }: TransactionSignatureModalProps) {
-  const { account, signTransaction, provider } = useSeiWallet()
+  const { account, signMessage, provider } = useSeiWallet()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [signature, setSignature] = useState("")
@@ -68,30 +68,26 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
     setError("")
 
     try {
-      // Create a transaction object for signing
-      const transactionData = {
-        from: account,
-        to: account, // Self-transaction for verification
-        value: "0x0", // No value transfer
-        data: `0x${Buffer.from(
-          JSON.stringify({
-            operation: operation.type,
-            timestamp: Date.now(),
-            details: operation.details,
-          }),
-          "utf8",
-        ).toString("hex")}`,
-        gas: "0x5208",
-        gasPrice: "0x9184e72a000",
+      // Create a message to sign instead of a transaction
+      const messageData = {
+        operation: operation.type,
+        title: operation.title,
+        timestamp: Date.now(),
+        account: account,
+        details: operation.details,
+        nonce: Math.random().toString(36).substring(7), // Add randomness
       }
 
-      const txSignature = await signTransaction(transactionData)
-      setSignature(txSignature)
+      const message = `PhanAI Operation Verification\n\n${JSON.stringify(messageData, null, 2)}\n\nBy signing this message, you authorize the above operation.`
+
+      const messageSignature = await signMessage(message)
+      setSignature(messageSignature)
 
       // Call the confirmation callback
-      onConfirm(txSignature)
+      onConfirm(messageSignature)
     } catch (error: any) {
-      setError(error.message || "Failed to sign transaction")
+      console.error("Signing error:", error)
+      setError(error.message || "Failed to sign message")
     } finally {
       setIsLoading(false)
     }
@@ -109,7 +105,7 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
         <DialogHeader>
           <DialogTitle className="flex items-center text-white">
             <Wallet className="w-5 h-5 mr-2 text-red-400" />
-            Transaction Signature Required
+            Operation Signature Required
           </DialogTitle>
         </DialogHeader>
 
@@ -137,14 +133,14 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
             </CardContent>
           </Card>
 
-          {/* Transaction Info */}
+          {/* Signature Info */}
           <Card className="bg-gray-900 border-gray-700">
             <CardContent className="p-4 space-y-3">
-              <h4 className="text-white font-medium">Transaction Information</h4>
+              <h4 className="text-white font-medium">Signature Information</h4>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">From:</span>
+                  <span className="text-gray-400">Signer:</span>
                   <span className="text-white font-mono">
                     {account ? `${account.slice(0, 8)}...${account.slice(-6)}` : "N/A"}
                   </span>
@@ -157,11 +153,15 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Estimated Gas:</span>
-                  <span className="text-white">{operation.estimatedGas || "~0.001 SEI"}</span>
+                  <span className="text-white">{operation.estimatedGas || "No gas required"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Operation Type:</span>
                   <span className="text-white capitalize">{operation.type.replace(/_/g, " ")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Signature Method:</span>
+                  <span className="text-white">Message Signing</span>
                 </div>
               </div>
             </CardContent>
@@ -175,8 +175,8 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
                 <div className="text-sm">
                   <p className="text-yellow-300 font-medium mb-1">Security Verification</p>
                   <p className="text-yellow-200">
-                    This signature verifies your identity and authorizes the operation. Your private keys remain secure
-                    and are never shared.
+                    This signature verifies your identity and authorizes the operation. You are signing a message, not
+                    sending a transaction. Your private keys remain secure.
                   </p>
                 </div>
               </div>
@@ -196,7 +196,7 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
             <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-green-300 text-sm font-medium">Transaction Signed Successfully</span>
+                <span className="text-green-300 text-sm font-medium">Message Signed Successfully</span>
               </div>
               <div className="text-green-300 text-xs font-mono break-all">
                 Signature: {signature.slice(0, 20)}...{signature.slice(-20)}
@@ -233,7 +233,7 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
             ) : (
               <>
                 <Wallet className="w-4 h-4 mr-2" />
-                Sign Transaction
+                Sign Message
               </>
             )}
           </Button>

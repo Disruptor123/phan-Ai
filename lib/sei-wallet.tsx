@@ -28,7 +28,7 @@ interface SeiWalletContextType {
   disconnect: () => void
   refreshBalance: () => Promise<void>
   provider: any
-  signTransaction: (transaction: any) => Promise<string>
+  signMessage: (message: string) => Promise<string>
   sendTransaction: (to: string, amount: string, memo?: string) => Promise<string>
 }
 
@@ -245,21 +245,36 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     autoConnect()
   }, [updateAccountInfo, disconnect])
 
-  const signTransaction = useCallback(
-    async (transaction: any) => {
+  const signMessage = useCallback(
+    async (message: string) => {
       if (!provider || !account) {
         throw new Error("Wallet not connected")
       }
 
       try {
-        const signature = await provider.request({
-          method: "eth_signTransaction",
-          params: [transaction],
-        })
-        return signature
+        // Convert message to hex if it's not already
+        const messageHex = message.startsWith("0x") ? message : `0x${Buffer.from(message, "utf8").toString("hex")}`
+
+        // Try personal_sign first (most common)
+        try {
+          const signature = await provider.request({
+            method: "personal_sign",
+            params: [messageHex, account],
+          })
+          return signature
+        } catch (personalSignError) {
+          console.log("personal_sign failed, trying eth_sign:", personalSignError)
+
+          // Fallback to eth_sign
+          const signature = await provider.request({
+            method: "eth_sign",
+            params: [account, messageHex],
+          })
+          return signature
+        }
       } catch (error) {
-        console.error("Transaction signing failed:", error)
-        throw error
+        console.error("Message signing failed:", error)
+        throw new Error("Failed to sign message. Please try again.")
       }
     },
     [provider, account],
@@ -311,7 +326,7 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     disconnect,
     refreshBalance,
     provider,
-    signTransaction,
+    signMessage,
     sendTransaction,
   }
 

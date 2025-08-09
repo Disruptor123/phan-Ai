@@ -7,12 +7,15 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Wallet, RefreshCw, TrendingUp, Eye, EyeOff, Copy, ExternalLink } from "lucide-react"
 import { useSeiWallet } from "@/lib/sei-wallet"
+import { SendReceiveModal } from "./send-receive-modal"
 
 export function WalletBalance() {
   const { account, chainId, balance, isLoadingBalance, assets, refreshBalance } = useSeiWallet()
 
   const [showBalance, setShowBalance] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showSendModal, setShowSendModal] = useState(false)
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -186,13 +189,22 @@ export function WalletBalance() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-2 pt-2">
-          <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+          <Button onClick={() => setShowSendModal(true)} size="sm" className="bg-red-600 hover:bg-red-700 text-white">
             Send
           </Button>
-          <Button size="sm" variant="outline" className="border-gray-700 text-white hover:bg-gray-800 bg-transparent">
+          <Button
+            onClick={() => setShowReceiveModal(true)}
+            size="sm"
+            variant="outline"
+            className="border-gray-700 text-white hover:bg-gray-800 bg-transparent"
+          >
             Receive
           </Button>
         </div>
+
+        {/* Send/Receive Modals */}
+        <SendReceiveModal isOpen={showSendModal} onClose={() => setShowSendModal(false)} mode="send" />
+        <SendReceiveModal isOpen={showReceiveModal} onClose={() => setShowReceiveModal(false)} mode="receive" />
       </CardContent>
     </Card>
   )

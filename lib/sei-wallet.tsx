@@ -28,6 +28,8 @@ interface SeiWalletContextType {
   disconnect: () => void
   refreshBalance: () => Promise<void>
   provider: any
+  signTransaction: (transaction: any) => Promise<string>
+  sendTransaction: (to: string, amount: string, memo?: string) => Promise<string>
 }
 
 interface Asset {
@@ -243,6 +245,59 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     autoConnect()
   }, [updateAccountInfo, disconnect])
 
+  const signTransaction = useCallback(
+    async (transaction: any) => {
+      if (!provider || !account) {
+        throw new Error("Wallet not connected")
+      }
+
+      try {
+        const signature = await provider.request({
+          method: "eth_signTransaction",
+          params: [transaction],
+        })
+        return signature
+      } catch (error) {
+        console.error("Transaction signing failed:", error)
+        throw error
+      }
+    },
+    [provider, account],
+  )
+
+  const sendTransaction = useCallback(
+    async (to: string, amount: string, memo?: string) => {
+      if (!provider || !account) {
+        throw new Error("Wallet not connected")
+      }
+
+      try {
+        // Convert amount to wei (assuming 18 decimals for SEI)
+        const amountWei = `0x${(Number.parseFloat(amount) * Math.pow(10, 18)).toString(16)}`
+
+        const transaction = {
+          from: account,
+          to: to,
+          value: amountWei,
+          gas: "0x5208", // 21000 gas limit
+          gasPrice: "0x9184e72a000", // 10 gwei
+          data: memo ? `0x${Buffer.from(memo, "utf8").toString("hex")}` : "0x",
+        }
+
+        const txHash = await provider.request({
+          method: "eth_sendTransaction",
+          params: [transaction],
+        })
+
+        return txHash
+      } catch (error) {
+        console.error("Transaction failed:", error)
+        throw error
+      }
+    },
+    [provider, account],
+  )
+
   // Update the value object to include new properties
   const value: SeiWalletContextType = {
     account,
@@ -256,6 +311,8 @@ export function SeiWalletProvider({ children }: { children: React.ReactNode }) {
     disconnect,
     refreshBalance,
     provider,
+    signTransaction,
+    sendTransaction,
   }
 
   return <SeiWalletContext.Provider value={value}>{children}</SeiWalletContext.Provider>

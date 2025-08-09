@@ -30,6 +30,7 @@ import {
 import { useRouter } from "next/navigation"
 import { useSeiWallet } from "@/lib/sei-wallet"
 import { WalletBalance } from "@/components/wallet-balance"
+import { TransactionSignatureModal } from "@/components/transaction-signature-modal"
 
 export default function Dashboard() {
   const router = useRouter()
@@ -71,10 +72,15 @@ export default function Dashboard() {
   const [tokensDistributed, setTokensDistributed] = useState(false)
   const [txFeesEnabled, setTxFeesEnabled] = useState(false)
   const [stakingEnabled, setStakingEnabled] = useState(false)
-  const [votingEnabled, setVotingEnabled] = useState(false)
+  const [votingEnabled, setVotingEnabled] = useState("")
   const [feeRate, setFeeRate] = useState("")
   const [apyRate, setApyRate] = useState("")
   const [votingWeight, setVotingWeight] = useState("")
+
+  // Add state for transaction signatures
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [currentOperation, setCurrentOperation] = useState<any>(null)
+  const [operationSignatures, setOperationSignatures] = useState<Record<string, string>>({})
 
   // Check wallet connection on mount
   useEffect(() => {
@@ -108,24 +114,22 @@ export default function Dashboard() {
       return
     }
 
-    setBlockchainCreated(false)
-
-    // Simulate blockchain creation process
-    const creationSteps = [
-      "Initializing blockchain parameters...",
-      "Setting up consensus mechanism...",
-      "Configuring network topology...",
-      "Deploying smart contracts...",
-      "Finalizing blockchain creation...",
-    ]
-
-    for (let i = 0; i < creationSteps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      console.log(creationSteps[i])
-    }
-
-    setBlockchainCreated(true)
-    alert(`Phantom blockchain "${blockchainName}" created successfully!`)
+    // Show signature modal first
+    setCurrentOperation({
+      type: "blockchain_creation",
+      title: "Create Phantom Blockchain",
+      description: `Creating phantom blockchain "${blockchainName}" with ${networkSize} network size`,
+      details: {
+        blockchainName,
+        blockchainType,
+        networkSize,
+        consensusAlgorithm,
+        transactionVolume,
+        seiIntegration,
+      },
+      estimatedGas: "~0.002 SEI",
+    })
+    setShowSignatureModal(true)
   }
 
   // Apply Configuration Handler
@@ -147,20 +151,20 @@ export default function Dashboard() {
       return
     }
 
-    setDeploymentStatus("deploying")
-    setDeploymentProgress(0)
-
-    // Simulate deployment progress
-    const progressInterval = setInterval(() => {
-      setDeploymentProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval)
-          setDeploymentStatus("deployed")
-          return 100
-        }
-        return prev + 10
-      })
-    }, 300)
+    // Show signature modal first
+    setCurrentOperation({
+      type: "blockchain_deployment",
+      title: "Deploy Phantom Blockchain",
+      description: `Deploying phantom blockchain "${blockchainName}" to the network`,
+      details: {
+        blockchainName,
+        blockSize,
+        transactionFees,
+        networkTopology,
+      },
+      estimatedGas: "~0.005 SEI",
+    })
+    setShowSignatureModal(true)
   }
 
   // Stress Test Handler
@@ -191,10 +195,20 @@ export default function Dashboard() {
       return
     }
 
-    // Simulate token creation
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setTokenCreated(true)
-    alert(`Token "${tokenName}" (${tokenSymbol}) created successfully!`)
+    // Show signature modal first
+    setCurrentOperation({
+      type: "token_creation",
+      title: "Create Token",
+      description: `Creating token "${tokenName}" (${tokenSymbol}) with ${totalSupply} total supply`,
+      details: {
+        tokenName,
+        tokenSymbol,
+        totalSupply,
+        decimals,
+      },
+      estimatedGas: "~0.003 SEI",
+    })
+    setShowSignatureModal(true)
   }
 
   // Distribute Tokens Handler
@@ -209,10 +223,21 @@ export default function Dashboard() {
       return
     }
 
-    // Simulate token distribution
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setTokensDistributed(true)
-    alert("Tokens distributed successfully!")
+    // Show signature modal first
+    setCurrentOperation({
+      type: "token_distribution",
+      title: "Distribute Tokens",
+      description: `Distributing ${tokenSymbol} tokens via ${distributionMethod}`,
+      details: {
+        tokenName,
+        tokenSymbol,
+        distributionMethod,
+        recipientCount: recipientAddresses.split("\n").length,
+        amountPerAddress,
+      },
+      estimatedGas: "~0.004 SEI",
+    })
+    setShowSignatureModal(true)
   }
 
   // Update Token Configuration Handler
@@ -225,6 +250,97 @@ export default function Dashboard() {
     // Simulate configuration update
     await new Promise((resolve) => setTimeout(resolve, 1500))
     alert("Token configuration updated successfully!")
+  }
+
+  // Add signature confirmation handler
+  const handleSignatureConfirm = async (signature: string) => {
+    if (!currentOperation) return
+
+    // Store the signature
+    setOperationSignatures((prev) => ({
+      ...prev,
+      [currentOperation.type]: signature,
+    }))
+
+    setShowSignatureModal(false)
+
+    // Execute the actual operation based on type
+    try {
+      switch (currentOperation.type) {
+        case "blockchain_creation":
+          await executeBlockchainCreation(signature)
+          break
+        case "token_creation":
+          await executeTokenCreation(signature)
+          break
+        case "blockchain_deployment":
+          await executeBlockchainDeployment(signature)
+          break
+        case "token_distribution":
+          await executeTokenDistribution(signature)
+          break
+      }
+    } catch (error) {
+      console.error("Operation execution failed:", error)
+      alert("Operation failed after signature. Please try again.")
+    }
+
+    setCurrentOperation(null)
+  }
+
+  // Add execution functions
+  const executeBlockchainCreation = async (signature: string) => {
+    setBlockchainCreated(false)
+
+    // Simulate blockchain creation process with signature verification
+    const creationSteps = [
+      "Verifying transaction signature...",
+      "Initializing blockchain parameters...",
+      "Setting up consensus mechanism...",
+      "Configuring network topology...",
+      "Deploying smart contracts...",
+      "Finalizing blockchain creation...",
+    ]
+
+    for (let i = 0; i < creationSteps.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      console.log(creationSteps[i])
+    }
+
+    setBlockchainCreated(true)
+    alert(`Phantom blockchain "${blockchainName}" created successfully!\nSignature: ${signature.slice(0, 20)}...`)
+  }
+
+  const executeTokenCreation = async (signature: string) => {
+    // Simulate token creation with signature verification
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setTokenCreated(true)
+    alert(`Token "${tokenName}" (${tokenSymbol}) created successfully!\nSignature: ${signature.slice(0, 20)}...`)
+  }
+
+  const executeBlockchainDeployment = async (signature: string) => {
+    setDeploymentStatus("deploying")
+    setDeploymentProgress(0)
+
+    // Simulate deployment progress with signature verification
+    const progressInterval = setInterval(() => {
+      setDeploymentProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval)
+          setDeploymentStatus("deployed")
+          alert(`Blockchain deployed successfully!\nSignature: ${signature.slice(0, 20)}...`)
+          return 100
+        }
+        return prev + 10
+      })
+    }, 300)
+  }
+
+  const executeTokenDistribution = async (signature: string) => {
+    // Simulate token distribution with signature verification
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setTokensDistributed(true)
+    alert(`Tokens distributed successfully!\nSignature: ${signature.slice(0, 20)}...`)
   }
 
   if (!isConnected) {
@@ -334,6 +450,17 @@ export default function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {operationSignatures.blockchain_creation && (
+                      <div className="bg-green-900/20 border border-green-700 rounded-lg p-3 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                          <span className="text-green-300 text-sm">
+                            Blockchain creation verified with signature:{" "}
+                            {operationSignatures.blockchain_creation.slice(0, 10)}...
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {/* Basic Setup Section */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold text-white">Basic Information</h3>
@@ -732,6 +859,17 @@ export default function Dashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {operationSignatures.token_creation && (
+                        <div className="bg-green-900/20 border border-green-700 rounded-lg p-3 mb-4">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-4 h-4 text-green-400" />
+                            <span className="text-green-300 text-sm">
+                              Token creation verified with signature: {operationSignatures.token_creation.slice(0, 10)}
+                              ...
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label className="text-white">Token Name</Label>
                         <Input
@@ -941,6 +1079,18 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      {/* Transaction Signature Modal */}
+      {currentOperation && (
+        <TransactionSignatureModal
+          isOpen={showSignatureModal}
+          onClose={() => {
+            setShowSignatureModal(false)
+            setCurrentOperation(null)
+          }}
+          onConfirm={handleSignatureConfirm}
+          operation={currentOperation}
+        />
+      )}
     </div>
   )
 }

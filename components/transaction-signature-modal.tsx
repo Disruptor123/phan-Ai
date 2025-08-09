@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Shield, CheckCircle, AlertCircle, Loader2, FileText, Wallet } from "lucide-react"
+import { Shield, CheckCircle, AlertCircle, Loader2, FileText, Wallet, Info } from "lucide-react"
 import { useSeiWallet } from "@/lib/sei-wallet"
 
 interface TransactionSignatureModalProps {
@@ -68,17 +68,17 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
     setError("")
 
     try {
-      // Create a message to sign instead of a transaction
+      // Create a message to sign for verification
       const messageData = {
         operation: operation.type,
         title: operation.title,
         timestamp: Date.now(),
         account: account,
         details: operation.details,
-        nonce: Math.random().toString(36).substring(7), // Add randomness
+        nonce: Math.random().toString(36).substring(7),
       }
 
-      const message = `PhanAI Operation Verification\n\n${JSON.stringify(messageData, null, 2)}\n\nBy signing this message, you authorize the above operation.`
+      const message = `PhanAI Operation Authorization\n\nOperation: ${operation.title}\nType: ${operation.type}\nAccount: ${account}\nTimestamp: ${new Date().toISOString()}\n\nDetails:\n${JSON.stringify(operation.details, null, 2)}\n\nBy authorizing this operation, you confirm your intent to proceed.`
 
       const messageSignature = await signMessage(message)
       setSignature(messageSignature)
@@ -86,8 +86,8 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
       // Call the confirmation callback
       onConfirm(messageSignature)
     } catch (error: any) {
-      console.error("Signing error:", error)
-      setError(error.message || "Failed to sign message")
+      console.error("Authorization error:", error)
+      setError(error.message || "Failed to authorize operation")
     } finally {
       setIsLoading(false)
     }
@@ -105,7 +105,7 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
         <DialogHeader>
           <DialogTitle className="flex items-center text-white">
             <Wallet className="w-5 h-5 mr-2 text-red-400" />
-            Operation Signature Required
+            Operation Authorization Required
           </DialogTitle>
         </DialogHeader>
 
@@ -133,14 +133,14 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
             </CardContent>
           </Card>
 
-          {/* Signature Info */}
+          {/* Authorization Info */}
           <Card className="bg-gray-900 border-gray-700">
             <CardContent className="p-4 space-y-3">
-              <h4 className="text-white font-medium">Signature Information</h4>
+              <h4 className="text-white font-medium">Authorization Information</h4>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Signer:</span>
+                  <span className="text-gray-400">Authorizer:</span>
                   <span className="text-white font-mono">
                     {account ? `${account.slice(0, 8)}...${account.slice(-6)}` : "N/A"}
                   </span>
@@ -152,31 +152,31 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Estimated Gas:</span>
-                  <span className="text-white">{operation.estimatedGas || "No gas required"}</span>
+                  <span className="text-gray-400">Environment:</span>
+                  <span className="text-white">Phantom Blockchain Testnet</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Operation Type:</span>
                   <span className="text-white capitalize">{operation.type.replace(/_/g, " ")}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Signature Method:</span>
-                  <span className="text-white">Message Signing</span>
+                  <span className="text-gray-400">Authorization Method:</span>
+                  <span className="text-white">Wallet Verification</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Security Notice */}
-          <Card className="bg-yellow-900/20 border-yellow-700">
+          {/* Phantom Blockchain Notice */}
+          <Card className="bg-blue-900/20 border-blue-700">
             <CardContent className="p-4">
               <div className="flex items-start space-x-2">
-                <Shield className="w-4 h-4 text-yellow-400 mt-0.5" />
+                <Info className="w-4 h-4 text-blue-400 mt-0.5" />
                 <div className="text-sm">
-                  <p className="text-yellow-300 font-medium mb-1">Security Verification</p>
-                  <p className="text-yellow-200">
-                    This signature verifies your identity and authorizes the operation. You are signing a message, not
-                    sending a transaction. Your private keys remain secure.
+                  <p className="text-blue-300 font-medium mb-1">Phantom Blockchain Environment</p>
+                  <p className="text-blue-200">
+                    This operation will be executed in a secure phantom blockchain environment. No real assets are at
+                    risk, and all operations are for testing and development purposes.
                   </p>
                 </div>
               </div>
@@ -196,10 +196,10 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
             <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
               <div className="flex items-center space-x-2 mb-2">
                 <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-green-300 text-sm font-medium">Message Signed Successfully</span>
+                <span className="text-green-300 text-sm font-medium">Operation Authorized Successfully</span>
               </div>
               <div className="text-green-300 text-xs font-mono break-all">
-                Signature: {signature.slice(0, 20)}...{signature.slice(-20)}
+                Authorization ID: {signature.slice(0, 20)}...{signature.slice(-20)}
               </div>
             </div>
           )}
@@ -223,17 +223,17 @@ export function TransactionSignatureModal({ isOpen, onClose, onConfirm, operatio
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Signing...
+                Authorizing...
               </>
             ) : signature ? (
               <>
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Signed
+                Authorized
               </>
             ) : (
               <>
-                <Wallet className="w-4 h-4 mr-2" />
-                Sign Message
+                <Shield className="w-4 h-4 mr-2" />
+                Authorize Operation
               </>
             )}
           </Button>

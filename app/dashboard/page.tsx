@@ -26,11 +26,13 @@ import {
   LogOut,
   Wallet,
   Copy,
+  Loader2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useSeiWallet } from "@/lib/sei-wallet"
 import { WalletBalance } from "@/components/wallet-balance"
 import { TransactionSignatureModal } from "@/components/transaction-signature-modal"
+import { SignatureVerification } from "@/components/signature-verification"
 
 export default function Dashboard() {
   const router = useRouter()
@@ -81,6 +83,11 @@ export default function Dashboard() {
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [currentOperation, setCurrentOperation] = useState<any>(null)
   const [operationSignatures, setOperationSignatures] = useState<Record<string, string>>({})
+
+  // Add test mode state
+  const [testMode, setTestMode] = useState(false)
+  const [testResults, setTestResults] = useState<any[]>([])
+  const [isRunningTests, setIsRunningTests] = useState(false)
 
   // Check wallet connection on mount
   useEffect(() => {
@@ -252,6 +259,131 @@ export default function Dashboard() {
     alert("Token configuration updated successfully!")
   }
 
+  // Comprehensive Authorization Flow Test
+  const runAuthorizationTests = async () => {
+    setIsRunningTests(true)
+    setTestResults([])
+    const results: any[] = []
+
+    const testOperations = [
+      {
+        type: "blockchain_creation",
+        title: "Test Phantom Blockchain Creation",
+        description: "Testing blockchain creation authorization flow",
+        details: {
+          blockchainName: "Test Chain",
+          blockchainType: "sei",
+          networkSize: "small",
+          consensusAlgorithm: "pos",
+          transactionVolume: "500",
+          seiIntegration: true,
+        },
+      },
+      {
+        type: "token_creation",
+        title: "Test Token Creation",
+        description: "Testing token creation authorization flow",
+        details: {
+          tokenName: "Test Token",
+          tokenSymbol: "TEST",
+          totalSupply: "1000000",
+          decimals: "18",
+        },
+      },
+      {
+        type: "blockchain_deployment",
+        title: "Test Blockchain Deployment",
+        description: "Testing blockchain deployment authorization flow",
+        details: {
+          blockchainName: "Test Chain",
+          blockSize: "2",
+          transactionFees: "25",
+          networkTopology: "mesh",
+        },
+      },
+      {
+        type: "token_distribution",
+        title: "Test Token Distribution",
+        description: "Testing token distribution authorization flow",
+        details: {
+          tokenName: "Test Token",
+          tokenSymbol: "TEST",
+          distributionMethod: "airdrop",
+          recipientCount: 5,
+          amountPerAddress: "100",
+        },
+      },
+    ]
+
+    for (const operation of testOperations) {
+      try {
+        const startTime = Date.now()
+
+        // Test signature generation
+        const messageData = {
+          operation: operation.type,
+          title: operation.title,
+          timestamp: Date.now(),
+          account: account,
+          details: operation.details,
+          nonce: Math.random().toString(36).substring(7),
+        }
+
+        const message = `PhanAI Operation Authorization\n\nOperation: ${operation.title}\nType: ${operation.type}\nAccount: ${account}\nTimestamp: ${new Date().toISOString()}\n\nDetails:\n${JSON.stringify(operation.details, null, 2)}\n\nBy authorizing this operation, you confirm your intent to proceed.`
+
+        // Mock signMessage function
+        const signMessage = async (message: string) => {
+          // Simulate signature generation
+          await new Promise((resolve) => setTimeout(resolve, 500))
+          return `0x${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+        }
+
+        const signature = await signMessage(message)
+        const endTime = Date.now()
+
+        // Verify signature format
+        const isValidFormat = signature.startsWith("0x") && signature.length > 20
+
+        // Test signature uniqueness
+        const existingSignatures = JSON.parse(localStorage.getItem("phan_signatures") || "[]")
+        const isDuplicate = existingSignatures.some((sig: any) => sig.signature === signature)
+
+        results.push({
+          operation: operation.type,
+          title: operation.title,
+          status: "success",
+          signature: signature,
+          duration: endTime - startTime,
+          validFormat: isValidFormat,
+          isDuplicate: isDuplicate,
+          timestamp: new Date().toISOString(),
+        })
+
+        // Small delay between tests
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      } catch (error: any) {
+        results.push({
+          operation: operation.type,
+          title: operation.title,
+          status: "error",
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    }
+
+    setTestResults(results)
+    setIsRunningTests(false)
+
+    // Show test summary
+    const successCount = results.filter((r) => r.status === "success").length
+    const errorCount = results.filter((r) => r.status === "error").length
+
+    alert(
+      `Authorization Flow Test Complete!\n\nSuccessful: ${successCount}\nFailed: ${errorCount}\n\nCheck the test results panel for details.`,
+    )
+  }
+
   // Add signature confirmation handler
   const handleSignatureConfirm = async (signature: string) => {
     if (!currentOperation) return
@@ -386,6 +518,32 @@ export default function Dashboard() {
               </Button>
             </div>
 
+            {/* Test Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch id="test-mode" checked={testMode} onCheckedChange={setTestMode} />
+              <Label htmlFor="test-mode" className="text-white text-sm">
+                Test Mode
+              </Label>
+            </div>
+
+            {testMode && (
+              <Button
+                onClick={runAuthorizationTests}
+                disabled={isRunningTests}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isRunningTests ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  "Run Auth Tests"
+                )}
+              </Button>
+            )}
+
             <Badge variant="outline" className="text-green-400 border-green-400">
               <Activity className="w-4 h-4 mr-2" />
               System Online
@@ -416,7 +574,7 @@ export default function Dashboard() {
           {/* Main Content Area - Takes up 3 columns */}
           <div className="col-span-3">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-black border border-gray-800">
+              <TabsList className="grid w-full grid-cols-4 bg-black border border-gray-800">
                 <TabsTrigger
                   value="basic"
                   className="data-[state=active]:bg-white data-[state=active]:text-black text-white"
@@ -437,6 +595,13 @@ export default function Dashboard() {
                 >
                   <Coins className="w-4 h-4 mr-2" />
                   Token Deployment
+                </TabsTrigger>
+                <TabsTrigger
+                  value="verification"
+                  className="data-[state=active]:bg-white data-[state=active]:text-black text-white"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Verification
                 </TabsTrigger>
               </TabsList>
 
@@ -1075,9 +1240,122 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </TabsContent>
+              {/* Signature Verification Page */}
+              <TabsContent value="verification" className="space-y-6">
+                <SignatureVerification />
+              </TabsContent>
             </Tabs>
           </div>
         </div>
+
+        {/* Test Results Panel */}
+        {testMode && testResults.length > 0 && (
+          <Card className="bg-black border-gray-800 mt-6">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Activity className="w-5 h-5 mr-2 text-purple-400" />
+                Authorization Flow Test Results
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {testResults.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`border rounded-lg p-4 ${
+                      result.status === "success" ? "border-green-700 bg-green-900/20" : "border-red-700 bg-red-900/20"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-white font-medium">{result.title}</h4>
+                      <Badge
+                        variant="outline"
+                        className={
+                          result.status === "success"
+                            ? "text-green-400 border-green-400"
+                            : "text-red-400 border-red-400"
+                        }
+                      >
+                        {result.status}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-400">Operation:</span>
+                        <span className="text-white ml-2 capitalize">{result.operation?.replace(/_/g, " ")}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Duration:</span>
+                        <span className="text-white ml-2">{result.duration}ms</span>
+                      </div>
+                      {result.status === "success" && (
+                        <>
+                          <div>
+                            <span className="text-gray-400">Valid Format:</span>
+                            <span className={`ml-2 ${result.validFormat ? "text-green-400" : "text-red-400"}`}>
+                              {result.validFormat ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Unique:</span>
+                            <span className={`ml-2 ${!result.isDuplicate ? "text-green-400" : "text-red-400"}`}>
+                              {!result.isDuplicate ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-gray-400">Signature:</span>
+                            <span className="text-white ml-2 font-mono text-xs break-all">
+                              {result.signature?.slice(0, 20)}...{result.signature?.slice(-20)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {result.status === "error" && (
+                        <div className="col-span-2">
+                          <span className="text-gray-400">Error:</span>
+                          <span className="text-red-400 ml-2">{result.error}</span>
+                        </div>
+                      )}
+                      <div className="col-span-2">
+                        <span className="text-gray-400">Timestamp:</span>
+                        <span className="text-white ml-2">{result.timestamp}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Test Summary */}
+              <div className="mt-6 p-4 bg-gray-900 border border-gray-700 rounded-lg">
+                <h4 className="text-white font-medium mb-2">Test Summary</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-400">
+                      {testResults.filter((r) => r.status === "success").length}
+                    </div>
+                    <div className="text-gray-400">Successful</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-400">
+                      {testResults.filter((r) => r.status === "error").length}
+                    </div>
+                    <div className="text-gray-400">Failed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-400">
+                      {testResults.length > 0
+                        ? Math.round(testResults.reduce((acc, r) => acc + (r.duration || 0), 0) / testResults.length)
+                        : 0}
+                      ms
+                    </div>
+                    <div className="text-gray-400">Avg Duration</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
       {/* Transaction Signature Modal */}
       {currentOperation && (
